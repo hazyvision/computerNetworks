@@ -18,7 +18,7 @@ public class UdpClient {
 	   			InputStream fromServer =  socket.getInputStream();
 	   			OutputStream toServer = socket.getOutputStream();
 	   			short handShakeMessage = (short)handShake(fromServer,toServer);
-	   			System.out.println(handShakeMessage);
+	   			System.out.println("HandShakeMessage> " + handShakeMessage);
 	   			/*
 				int ctr=0;
 				int dataSize=2;
@@ -29,8 +29,9 @@ public class UdpClient {
 		   			//Initialize Header Variables
 		   			byte version = 4;
 		   			byte hlen = (byte) 5;
+		   			byte udpHlen = (byte) 8;
 		   			byte tos=0;
-		   			short length= ((short) ((hlen*4+dataSize)));
+		   			short length= ((short) (((hlen*4)+(udpHlen*4)+dataSize)));
 		   			short ident = 0;
 		   			short flags = 0;
 		   			short offset = 1024;
@@ -61,7 +62,6 @@ public class UdpClient {
 		   			bb.putInt(destAddress);
 		   			checksum_Funct(checksum,bb,hlen);
 		   			//--------------------UDP HEADER---------------------------
-		   				byte udpHlen = 8;
 		   				short sourcePort =(short) 420 ;
 		   				short destinationPort = handShakeMessage;
 		   				short udpLength = (short) ((udpHlen * 4) + dataSize);
