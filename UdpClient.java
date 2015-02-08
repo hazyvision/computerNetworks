@@ -3,7 +3,9 @@
 // CS380(P5)
 
 
-// UDP HEADERS BRANCH?
+// UDP HEADERS BRANCH
+
+
 import java.io.*;
 import java.util.*;
 import java.net.*;
@@ -15,27 +17,20 @@ public class UdpClient {
 	   		try( Socket socket = new Socket("76.91.123.97",38005)){ 
 	   			InputStream fromServer =  socket.getInputStream();
 	   			OutputStream toServer = socket.getOutputStream();
-	   			short udpPortNumber = (short)handShake(fromServer,toServer); //Unsigned 16 bit int
-	   			System.out.println(udpPortNumber);
-	   			
+	   			short handShakeMessage = (short)handShake(fromServer,toServer);
+	   			System.out.println(handShakeMessage);
 	   			/*
 				int ctr=0;
 				int dataSize=2;
 				while( ctr != 11){
 				*/
 	   				int dataSize=2;
-		   			//Initialize data 
-		   			byte data[] = new byte[dataSize];
-		   			Random rand = new Random ();
-		   			for(int i = 0; i < dataSize; i++){
-		   				data[i] = (byte)rand.nextInt();
-		   			} //end For
 		   			
 		   			//Initialize Header Variables
 		   			byte version = 4;
 		   			byte hlen = (byte) 5;
 		   			byte tos=0;
-		   			short length= ((short) ((hlen*4+data.length)));
+		   			short length= ((short) ((hlen*4+dataSize)));
 		   			short ident = 0;
 		   			short flags = 0;
 		   			short offset = 1024;
@@ -65,6 +60,28 @@ public class UdpClient {
 		   			bb.putInt(srcAddress);
 		   			bb.putInt(destAddress);
 		   			checksum_Funct(checksum,bb,hlen);
+		   			//--------------------UDP HEADER---------------------------
+		   				byte udpHlen = 8;
+		   				short sourcePort =(short) 420 ;
+		   				short destinationPort = handShakeMessage;
+		   				short udpLength = (short) ((udpHlen * 4) + dataSize);
+		   				short udpChecksum= 0;
+		   				
+		   				bb.putShort(sourcePort);
+		   				bb.putShort(destinationPort);
+		   				bb.putShort(udpLength);
+		   				bb.putShort(udpChecksum);
+		   				checksum_Funct(udpChecksum,bb,udpHlen);
+
+		   			//---------------------------------------------------------
+
+		   			//Initialize data 
+		   			byte data[] = new byte[dataSize];
+		   			Random rand = new Random ();
+		   			for(int i = 0; i < dataSize; i++){
+		   				data[i] = (byte)rand.nextInt();
+		   			} //end For
+
 		   			bb.put(data); 						
 		   			toServer.write(b);
 		   			byte[] server = new byte[4];
@@ -72,7 +89,7 @@ public class UdpClient {
 		   			System.out.println("Server> " + DatatypeConverter.printHexBinary(server));
 
 		   			//increment counter
-		   			dataSize = dataSize * 2;
+		   			//dataSize = dataSize * 2;
 		   			//ctr++;
 				//} // end while loop
 	   		}catch (Exception e){return;}//end try		
@@ -86,7 +103,7 @@ public class UdpClient {
 			return (short)fromServer.read();	
 		} //end handShake
 		
-		public static void checksum_Funct(short checksum, ByteBuffer bb, byte hlen){
+		public static short checksum_Funct(short checksum, ByteBuffer bb, byte hlen){
 			int num = 0;
 			bb.rewind();
 			for(int i = 0; i < hlen*2; ++i){
@@ -95,5 +112,6 @@ public class UdpClient {
 			num = ((num >> 16) & 0xFFFF) + (num & 0xFFFF);
 			checksum = (short) (~num & 0xFFFF);
 			bb.putShort(10,checksum);
+			return checksum;
 		}//end checksum_Funct
 }//end UdpClient
