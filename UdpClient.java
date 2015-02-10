@@ -3,7 +3,7 @@
 // CS380(P5)
 
 
-// UDP HEADERS BRANCH
+// UDP HEADERS Addition BRANCH
 
 
 import java.io.*;
@@ -63,18 +63,16 @@ public class UdpClient {
 		   			bb.put(ByteBuffer.allocate(4).putInt((int) 0xDEADBEEF).array());
 		   			
 		   			toServer.write(handshake);
-		   			byte array[] = new byte[2];
-		   			fromServer.read(array);
-					System.out.println("handshake> " + DatatypeConverter.printHexBinary(array));
-					//20 + datasize--------> 1st packet with UDP and pseudo
-		   			//START UDP-----------------------------------------------------------------------------------------------------------
+		   			byte hs[] = new byte[2];
+		   			fromServer.read(hs);
+		   			//short handshakeMessage = ByteBuffer.wrap(hs).order(ByteOrder.LITTLE_ENDIAN).getShort(); //0xCAFEDOOD error here
+		   			
+					System.out.println("handshake> " + DatatypeConverter.printHexBinary(hs));
+		   			//------------Start 2nd Packet( Ipv4 + Udp)-------------------------------------------------
 		   			// wrap and send udp packet 
 					int dataSize2 = 2; 
 					byte udpHlen = 8;
 
-		   			
-		   			//dataSize2+= udpHlen;
-					
 					short newLength =(short) (hlen*4 + (dataSize2 + udpHlen)); 	
 	   				byte udpHeader[] = new byte[newLength];
 	   				ByteBuffer buf = ByteBuffer.wrap(udpHeader);
@@ -89,8 +87,8 @@ public class UdpClient {
 		   			buf.putInt(srcAddress);
 		   			buf.putInt(destAddress);
 		   			checksum = (byte) checksum_Funct(buf,hlen);
-		   			//--------------------------------------------------------------
-	   				//pseudo Header for checksum calculations. Do not send to server
+		   			//--------------Start Pseudo Header---------------------------
+
 	   				int pseudoSrcAddress = srcAddress;
 	   				int pseudoDestAddress = destAddress;
 	   				byte zeros = 0;
@@ -106,19 +104,29 @@ public class UdpClient {
 	   				pseudoBuf.put(pseudoProtocol);
 	   				pseudoBuf.putShort(pseudoUdpLength);
 	   				
-		   			//--------------------UDP HEADER---------------------------
-
-		   			
+	   				//pseudoBuf.put(hs[0]);
+	   				//pseudoBuf.put(hs[1]);
+	   				//short udpLength = (short) (udpHlen+ dataSize2);
+	   				//pseudoBuf.putShort((short) /*udpLength*/8);	
+	   				   				
+	   				
+	   				//----------------------End Pseudo Header---------------------
+	   				
+		   			//-------------------Start -UDP HEADER---------------------------		   			
 	   				short sourcePort =(short) 4201;
-	   				short destinationPort = ByteBuffer.wrap(array).order(ByteOrder.LITTLE_ENDIAN).getShort();
-	   				short udpLength = (short) (udpHlen + dataSize2);
+	   				short udpLength = (short) (udpHlen+ dataSize2);
+	   				//short destinationPort = (short)handshakeMessage;
+	   				
 	   				byte[] udpArr = new byte[udpLength];
 	   				ByteBuffer udpBuf = ByteBuffer.wrap(udpArr);
 	   				
 	   				udpBuf.putShort(sourcePort);
-	   				udpBuf.putShort(destinationPort);
+	   				//udpBuf.putShort(destinationPort);
+	   				udpBuf.put(hs[0]);
+	   				udpBuf.put(hs[1]);
 	   				udpBuf.putShort(udpLength);
 	   				udpBuf.putShort(udpChecksum);
+	   				//udpChecksum = checksum_Funct(udpBuf,(byte) (udpHlen +12));
 	   				
 		   			//Initialize dummy data 
 		   			byte data[] = new byte[2];
@@ -127,8 +135,8 @@ public class UdpClient {
 		   				data[i] = (byte)rand.nextInt();
 		   			} //end For
 	   				udpBuf.put(data);
-
-	   				//udpChecksum = checksum_Funct(pseudoBuf,(byte) 8 );
+	   				//--------------------End UDP Header-------------------------------
+	   				
 		   			buf.put(udpArr);
 		   			toServer.write(udpHeader);
 		   			byte[] server = new byte[4];
@@ -142,15 +150,6 @@ public class UdpClient {
 	   		}catch (Exception e){return;}//end try		
 		}//end main
 		
-		/*
-		public static short handShake(InputStream fromServer,OutputStream toServer) throws IOException{
-			byte[] toHandShake = new byte[4];
-			ByteBuffer buf = ByteBuffer.wrap(toHandShake);
-			buf.putInt( 0xDEADBEEF);
-			toServer.write(toHandShake);
-			return (short)fromServer.read();	
-		} //end handShake
-		*/
 		public static short checksum_Funct(ByteBuffer bb, byte hlen){
 			short checksum;
 			int num = 0;
