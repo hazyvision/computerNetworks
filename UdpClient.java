@@ -66,12 +66,7 @@ public class UdpClient {
 		   			byte array[] = new byte[2];
 		   			fromServer.read(array);
 					System.out.println("handshake> " + DatatypeConverter.printHexBinary(array));
-
-<<<<<<< HEAD
-//20 + datasize--------> 1st packet with UDP and pseudo
-=======
 					//20 + datasize--------> 1st packet with UDP and pseudo
->>>>>>> c62b483c9bdff8e4e1c735b6502a6e5acec7f24b
 		   			//START UDP-----------------------------------------------------------------------------------------------------------
 		   			// wrap and send udp packet 
 					int dataSize2 = 2; 
