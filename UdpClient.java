@@ -65,7 +65,7 @@ public class UdpClient {
 		   			toServer.write(handshake);
 		   			byte hs[] = new byte[2];
 		   			fromServer.read(hs);
-		   			//short handshakeMessage = ByteBuffer.wrap(hs).order(ByteOrder.LITTLE_ENDIAN).getShort(); //0xCAFEDOOD error here
+		   		
 		   			
 					System.out.println("handshake> " + DatatypeConverter.printHexBinary(hs));
 		   			//------------Start 2nd Packet( Ipv4 + Udp)-------------------------------------------------
@@ -87,15 +87,21 @@ public class UdpClient {
 		   			buf.putInt(srcAddress);
 		   			buf.putInt(destAddress);
 		   			checksum = (byte) checksum_Funct(buf,hlen);
+		   			
+		   			byte data[] = new byte[2];
+		   			Random rand = new Random ();
+		   			for(int i = 0; i < 2; i++){
+		   				data[i] = (byte)rand.nextInt();
+		   			} //end For
 		   			//--------------Start Pseudo Header---------------------------
 
 	   				int pseudoSrcAddress = srcAddress;
 	   				int pseudoDestAddress = destAddress;
 	   				byte zeros = 0;
 	   				byte pseudoProtocol = 17;
-	   				short pseudoUdpLength= newLength;
+	   				short pseudoUdpLength= (short) (udpHlen + dataSize2);
 	   				
-	   				byte psuedoHeader[] = new byte[12];
+	   				byte psuedoHeader[] = new byte[20];
 	   				ByteBuffer pseudoBuf = ByteBuffer.wrap(psuedoHeader);
 	   				
 	   				pseudoBuf.putInt(pseudoSrcAddress);
@@ -103,20 +109,19 @@ public class UdpClient {
 	   				pseudoBuf.put(zeros);
 	   				pseudoBuf.put(pseudoProtocol);
 	   				pseudoBuf.putShort(pseudoUdpLength);
+	   				pseudoBuf.putShort((short)420);
+	   				pseudoBuf.put(hs[0]);
+	   				pseudoBuf.put(hs[1]);
+	   				pseudoBuf.putShort((short) pseudoUdpLength);	
 	   				
-	   				//pseudoBuf.put(hs[0]);
-	   				//pseudoBuf.put(hs[1]);
-	   				//short udpLength = (short) (udpHlen+ dataSize2);
-	   				//pseudoBuf.putShort((short) /*udpLength*/8);	
-	   				   				
-	   				
+	   				//short pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (6));
+	   				pseudoBuf.put(data);
 	   				//----------------------End Pseudo Header---------------------
 	   				
-		   			//-------------------Start -UDP HEADER---------------------------		   			
-	   				short sourcePort =(short) 4201;
+		   			//-------------------Start -UDP HEADER---------------------------	
 	   				short udpLength = (short) (udpHlen+ dataSize2);
-	   				//short destinationPort = (short)handshakeMessage;
-	   				
+	   				short sourcePort =(short) 420;
+	   				//short udpLength = (short) (udpHlen+ dataSize2);
 	   				byte[] udpArr = new byte[udpLength];
 	   				ByteBuffer udpBuf = ByteBuffer.wrap(udpArr);
 	   				
@@ -125,15 +130,12 @@ public class UdpClient {
 	   				udpBuf.put(hs[0]);
 	   				udpBuf.put(hs[1]);
 	   				udpBuf.putShort(udpLength);
-	   				udpBuf.putShort(udpChecksum);
-	   				//udpChecksum = checksum_Funct(udpBuf,(byte) (udpHlen +12));
+	   				short pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (5));
+	   				//udpBuf.putShort(udpChecksum);
+	   			//	udpChecksum = checksum_Funct(udpBuf,(byte) (5));
 	   				
 		   			//Initialize dummy data 
-		   			byte data[] = new byte[2];
-		   			Random rand = new Random ();
-		   			for(int i = 0; i < 2; i++){
-		   				data[i] = (byte)rand.nextInt();
-		   			} //end For
+
 	   				udpBuf.put(data);
 	   				//--------------------End UDP Header-------------------------------
 	   				
