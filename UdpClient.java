@@ -88,9 +88,9 @@ public class UdpClient {
 		   			buf.putInt(destAddress);
 		   			checksum = (byte) checksum_Funct(buf,hlen);
 		   			
-		   			byte data[] = new byte[2];
+		   			byte data[] = new byte[dataSize2];
 		   			Random rand = new Random ();
-		   			for(int i = 0; i < 2; i++){
+		   			for(int i = 0; i < dataSize2; i++){
 		   				data[i] = (byte)rand.nextInt();
 		   			} //end For
 		   			//--------------Start Pseudo Header---------------------------
@@ -100,8 +100,9 @@ public class UdpClient {
 	   				byte zeros = 0;
 	   				byte pseudoProtocol = 17;
 	   				short pseudoUdpLength= (short) (udpHlen + dataSize2);
+	   				short pseudoChecksum = 0;
 	   				
-	   				byte psuedoHeader[] = new byte[20];
+	   				byte psuedoHeader[] = new byte[20 + dataSize2];
 	   				ByteBuffer pseudoBuf = ByteBuffer.wrap(psuedoHeader);
 	   				
 	   				pseudoBuf.putInt(pseudoSrcAddress);
@@ -113,9 +114,10 @@ public class UdpClient {
 	   				pseudoBuf.put(hs[0]);
 	   				pseudoBuf.put(hs[1]);
 	   				pseudoBuf.putShort((short) pseudoUdpLength);	
-	   				
-	   				//short pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (6));
+	   				//pseudoBuf.putShort(pseudoChecksum);
 	   				pseudoBuf.put(data);
+	   				pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (5));
+	   				
 	   				//----------------------End Pseudo Header---------------------
 	   				
 		   			//-------------------Start -UDP HEADER---------------------------	
@@ -130,13 +132,16 @@ public class UdpClient {
 	   				udpBuf.put(hs[0]);
 	   				udpBuf.put(hs[1]);
 	   				udpBuf.putShort(udpLength);
-	   				short pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (5));
+	   				udpBuf.putShort(pseudoChecksum);
+	   				//short pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (5));
 	   				//udpBuf.putShort(udpChecksum);
-	   			//	udpChecksum = checksum_Funct(udpBuf,(byte) (5));
+	   				//udpBuf.putShort(pseudoChecksum );
+	   				//udpChecksum = checksum_Funct(udpBuf,(byte) (5));
 	   				
 		   			//Initialize dummy data 
 
 	   				udpBuf.put(data);
+	   				
 	   				//--------------------End UDP Header-------------------------------
 	   				
 		   			buf.put(udpArr);
@@ -151,7 +156,6 @@ public class UdpClient {
 				//} // end while loop
 	   		}catch (Exception e){return;}//end try		
 		}//end main
-		
 		public static short checksum_Funct(ByteBuffer bb, byte hlen){
 			short checksum;
 			int num = 0;
