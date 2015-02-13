@@ -1,6 +1,2 @@
 # computerNetworks
-<<<<<<< HEAD
-Projects
-=======
 
->>>>>>> master

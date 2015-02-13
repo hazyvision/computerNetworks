@@ -1,171 +1,182 @@
-
 //Adriene Cuenco
-// CS380(P5)
-
-
-// UDP HEADERS Addition BRANCH
-
 
 import java.io.*;
-import java.util.*;
 import java.net.*;
+import java.util.*;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import javax.xml.bind.DatatypeConverter;
-public class UdpClient {
-		public static void main(String[] args) {
-	   		try( Socket socket = new Socket("76.91.123.97",38005)){ 
-	   			InputStream fromServer = socket.getInputStream();
-	   			OutputStream toServer = socket.getOutputStream();
-	   			/*
-				int ctr=0;
-				int dataSize=2;
-				while( ctr != 11){
-				*/
-	   				int dataSize=4;
-		   			
-		   			//Initialize Ipv4 Header Variables Handshake packet
-		   			byte version = 4;
-		   			byte hlen = (byte) 5;
-		   			byte tos=0;
-		   			short length= ((short) (((hlen*4)+dataSize)));
-		   			short ident = 0;
-		   			short flags = 0;
-		   			short offset = 1024;
-		   			byte ttl = 50;
-		   			byte protocol = 17; //UDP = 17 
-		   			short checksum = 0;
-		   			short udpChecksum= 0;
-		   			int srcAddress = 0, destAddress=0;
-		   			String ipSrcStr = "192.168.1.26", ipDestStr = "76.91.123.97";
-		   			String readTheIP_src[] = ipSrcStr.split("\\.");
-		   			String readTheIP_dest[] = ipDestStr.split("\\.");
-		   			for(int i = 0; i < 4; ++i){
-		   				srcAddress |= Integer.valueOf(readTheIP_src[i]) << ((3-i)*8);
-		   				destAddress |= Integer.valueOf(readTheIP_dest[i])<< ((3-i)*8);	
-		   			}
 
-		   			// wrap and send Handshake packet 
-		   			byte handshake[] = new byte[length];
-		   			ByteBuffer bb = ByteBuffer.wrap(handshake);
-		   			bb.put((byte) (((version & 0xF)<< 4)|(hlen & 0xF)));
-		   			bb.put(tos);
-		   			bb.putShort(length);
-		   			bb.putShort(ident);
-		   			bb.putShort((short)(((flags & 0x7) <<13)| (offset & 0x1FFFF) << 4));
-		   			bb.put(ttl);
-		   			bb.put(protocol);
-		   			bb.putShort(checksum);
-		   			bb.putInt(srcAddress);
-		   			bb.putInt(destAddress);
-		   			checksum = (byte) checksum_Funct(bb,hlen);
-		   			bb.put(ByteBuffer.allocate(4).putInt((int) 0xDEADBEEF).array());
-		   			
-		   			toServer.write(handshake);
-		   			byte hs[] = new byte[2];
-		   			fromServer.read(hs);
-		   		
-		   			
-					System.out.println("handshake> " + DatatypeConverter.printHexBinary(hs));
-		   			//------------Start 2nd Packet( Ipv4 + Udp)-------------------------------------------------
-		   			// wrap and send udp packet 
-					int dataSize2 = 2; 
-					byte udpHlen = 8;
+public class UdpClient{ 
+    //Initialize Global Variables
+      static byte version = 4;
+      static byte hlen = 5;
+      static byte tos = 0;
+      static short tLen = 0;
+      static short iden = 0;
+      static int flags =0x4000;
+      static byte ttl = 50;
+      static byte protocol = 17; //udp = 17
+      static short checksum = 0;
+      static int srcAddress = 0xC0A811A; //192.168.1.26
+      static int destAddress = 0x4C5B7B61; //76.91.123.97
+      static OutputStream out;
+      static InputStream in;
+      static long totalTime = 0;
+      
+      
+  public static void main(String[] args){
+      try (Socket socket = new Socket("76.91.123.97", 38005)){
+            out = socket.getOutputStream();
+            in = socket.getInputStream();
+            Random rand = new Random();
 
-					short newLength =(short) (hlen*4 + (dataSize2 + udpHlen)); 	
-	   				byte udpHeader[] = new byte[newLength];
-	   				ByteBuffer buf = ByteBuffer.wrap(udpHeader);
-		   			buf.put((byte) (((version & 0xF)<< 4)|(hlen & 0xF)));
-		   			buf.put(tos);
-		   			buf.putShort(newLength);
-		   			buf.putShort(ident);
-		   			buf.putShort((short)(((flags & 0x7) <<13)| (offset & 0x1FFFF) << 4));
-		   			buf.put(ttl);
-		   			buf.put(protocol);
-		   			buf.putShort(udpChecksum);
-		   			buf.putInt(srcAddress);
-		   			buf.putInt(destAddress);
-		   			checksum = (byte) checksum_Funct(buf,hlen);
-		   			
-		   			byte data[] = new byte[dataSize2];
-		   			Random rand = new Random ();
-		   			for(int i = 0; i < dataSize2; i++){
-		   				data[i] = (byte)rand.nextInt();
-		   			} //end For
-		   			//--------------Start Pseudo Header---------------------------
+            //Fill 0xDEADBEEF data
+            byte[] data = new byte[4];
+            data[0] = (byte)0xDE;
+            data[1] = (byte)0xAD;
+            data[2] = (byte)0xBE;
+            data[3] = (byte)0xEF;
+            
+            //Retrieve udpDestPort from handshake message
+            out.write(generateIpv4(data));
+            byte[] handshake = new byte[2];
+            in.read(handshake);
+            ByteBuffer wrapHandshake = ByteBuffer.wrap(handshake);
+            int udpDestPort = wrapHandshake.getShort(); 
+       
+            //Create udp data
+            int dataSize = 2;
+            for(int i = 0; i <11; i++){
+              double start = System.currentTimeMillis();
+              //Fill with random data
+              byte udpData[] = new byte[dataSize];
+              for(int j = 0; j < dataSize; j++){
+                udpData[i] = (byte)rand.nextInt();
+             } 
+              byte[] udpHeader = generateUdp(udpData, udpDestPort);
+              byte[] sendData2 = generateIpv4(udpHeader);
+              out.write(sendData2);
+              byte[] byteArray2 = new byte[4];
+              in.read(byteArray2);
+              double stop = System.currentTimeMillis();
+              double totalElapsed = stop - start;
+              totalTime+=totalElapsed;
+              System.out.println("Data Size: " + dataSize);
+              System.out.println("Server> " + DatatypeConverter.printHexBinary(byteArray2));
+              System.out.println("Time: " + totalElapsed + " ms");
+              System.out.println("---------------------------------------------------------");
+              //Double DataSize after every iteration
+              dataSize = dataSize * 2;
+          } //End For loop (Packet loop)
+            System.out.println("AvgRTT: " + totalTime/12 + " ms");
+        }  catch (Exception e){return;}
+    } // End Main
+      public static byte[] generateIpv4(byte[] data) {
+        checksum = 0;
+        int dataLength = data.length;
+        byte[] header = new byte[20 + dataLength];
+        
+        //Wrap header in Bytebuffer
+        ByteBuffer bb = ByteBuffer.wrap(header);
+        bb.put((byte) ((version & 0xf) << 4 | hlen & 0xf));
+        bb.put(tos);
+        tLen = (short)(20 + dataLength);
+        bb.putShort(tLen);
+        bb.putShort(iden);
+        bb.putShort((short) flags);
+        bb.put(ttl);
+        bb.put(protocol);
+        bb.putShort(checksum);
+        bb.putInt(srcAddress);
+        bb.putInt(destAddress);
+        checksum = (byte) checksum_Funct(bb,hlen);
+        bb.put(data);
+        return header;
+    }// End generateIpv4
+   public static byte[] generateUdp(byte[] data, int udpDestAddress){
+     //Start PseudoHeader-------------------------------------------
+        int pseudoSrcAddress = srcAddress;
+        int pseudoDestAddress = destAddress;
+        byte zeros = 0;
+        byte pseudoProtocol = 17;
+        int dataSize = data.length;
+        short pseudoUdpLength= (short) (8 + dataSize);
+        short pseudoChecksum = 0;
+        
+        byte[] psuedoHeader = new byte[20 + dataSize]; 
+        ByteBuffer pseudoBuf = ByteBuffer.wrap(psuedoHeader);
+        pseudoBuf.putInt(pseudoSrcAddress);
+        pseudoBuf.putInt(pseudoDestAddress);
+        pseudoBuf.put(zeros);
+        pseudoBuf.put(pseudoProtocol);               
+        pseudoBuf.putShort(pseudoUdpLength);
 
-	   				int pseudoSrcAddress = srcAddress;
-	   				int pseudoDestAddress = destAddress;
-	   				byte zeros = 0;
-	   				byte pseudoProtocol = 17;
-	   				short pseudoUdpLength= (short) (udpHlen + dataSize2);
-	   				short pseudoChecksum = 0;
-	   				
-	   				byte psuedoHeader[] = new byte[20 + dataSize2];
-	   				ByteBuffer pseudoBuf = ByteBuffer.wrap(psuedoHeader);
-	   				
-	   				pseudoBuf.putInt(pseudoSrcAddress);
-	   				pseudoBuf.putInt(pseudoDestAddress);
-	   				pseudoBuf.put(zeros);
-	   				pseudoBuf.put(pseudoProtocol);
-	   				pseudoBuf.putShort(pseudoUdpLength);
-	   				pseudoBuf.putShort((short)420);
-	   				pseudoBuf.put(hs[0]);
-	   				pseudoBuf.put(hs[1]);
-	   				pseudoBuf.putShort((short) pseudoUdpLength);	
-	   				//pseudoBuf.putShort(pseudoChecksum);
-	   				pseudoBuf.put(data);
-	   				pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (5));
-	   				
-	   				//----------------------End Pseudo Header---------------------
-	   				
-		   			//-------------------Start -UDP HEADER---------------------------	
-	   				short udpLength = (short) (udpHlen+ dataSize2);
-	   				short sourcePort =(short) 420;
-	   				//short udpLength = (short) (udpHlen+ dataSize2);
-	   				byte[] udpArr = new byte[udpLength];
-	   				ByteBuffer udpBuf = ByteBuffer.wrap(udpArr);
-	   				
-	   				udpBuf.putShort(sourcePort);
-	   				//udpBuf.putShort(destinationPort);
-	   				udpBuf.put(hs[0]);
-	   				udpBuf.put(hs[1]);
-	   				udpBuf.putShort(udpLength);
-	   				udpBuf.putShort(pseudoChecksum);
-	   				//short pseudoChecksum = checksum_Funct(pseudoBuf,(byte) (5));
-	   				//udpBuf.putShort(udpChecksum);
-	   				//udpBuf.putShort(pseudoChecksum );
-	   				//udpChecksum = checksum_Funct(udpBuf,(byte) (5));
-	   				
-		   			//Initialize dummy data 
+        pseudoBuf.putShort((short)udpDestAddress);
+        pseudoBuf.putShort((short)udpDestAddress);
 
-	   				udpBuf.put(data);
-	   				
-	   				//--------------------End UDP Header-------------------------------
-	   				
-		   			buf.put(udpArr);
-		   			toServer.write(udpHeader);
-		   			byte[] server = new byte[4];
-		   			fromServer.read(server);
-		   			System.out.println("Server> " + DatatypeConverter.printHexBinary(server));
+        short udpLength= (short) (8 + dataSize);
+        pseudoBuf.putShort(udpLength); 
+        pseudoBuf.put(data);          
+        
+        //Calculate Checksum on PseudoHeader
+        pseudoChecksum = checksum_Funct2(udpDestAddress, udpLength, checksum, data);
+        //End PseudoHeader----------------------------------------------------------
+        
+        short udpSrcAddress = (short)udpDestAddress;
+        //From handshake
+        int udpDataSize = data.length;
+        //Wrap udpHeader and data and return
+        byte[] udpHeader = new byte[8 + udpDataSize]; 
+        ByteBuffer udpHeaderWrap = ByteBuffer.wrap(udpHeader);
+        udpHeaderWrap.putShort((short)udpSrcAddress);
+        udpHeaderWrap.putShort((short)udpDestAddress);
+        udpHeaderWrap.putShort((short)udpLength); 
+        udpHeaderWrap.putShort((short)pseudoChecksum); 
+        udpHeaderWrap.put(data);
+        return udpHeader;
+    } //End generateUdp
 
-		   			//increment counter
-		   			//dataSize = dataSize * 2;
-		   			//ctr++;
-				//} // end while loop
-	   		}catch (Exception e){return;}//end try		
-		}//end main
-		public static short checksum_Funct(ByteBuffer bb, byte hlen){
-			short checksum;
-			int num = 0;
-			bb.rewind();
-			for(int i = 0; i < hlen*2; ++i){
-				num += 0xFFFF & bb.getShort();
-			}
-			num = ((num >> 16) & 0xFFFF) + (num & 0xFFFF);
-			checksum = (short) (~num & 0xFFFF);
-			bb.putShort(10,checksum);
-			return checksum;
-		}//end checksum_Funct
-}//end UdpClient
+  public static short checksum_Funct(ByteBuffer bb, byte hlen){
+    short checksum;
+    int num = 0;
+    bb.rewind();
+    for(int i = 0; i < hlen*2; ++i){
+      num += 0xFFFF & bb.getShort();
+    }
+    num = ((num >> 16) & 0xFFFF) + (num & 0xFFFF);
+    checksum = (short) (~num & 0xFFFF);
+    bb.putShort(10,checksum);
+    return checksum;
+  }//end checksum_Funct
+  
+     public static short checksum_Funct2(int port,int length, short checksum, byte[] data)
+   {
+      // udp header, 8 bytes
+      ByteBuffer header = ByteBuffer.allocate(length);
+      header.putShort((short) port);
+      header.putShort((short) port);
+      header.putShort((short) length);
+      header.putShort((short) 0);
+      header.put(data);
+      header.rewind();
+      
+      int sum = 0;
+      sum += ((srcAddress >> 16) & 0xFFFF) + (srcAddress & 0xFFFF);
+      sum += ((destAddress >> 16) & 0xFFFF) + (destAddress & 0xFFFF);
+      sum += (byte) 17 & 0xFFFF;
+      sum += length & 0xFFFF;
+      
+      //Sum header
+      for (int i = 0; i < length * 0.5 ; i++){
+        sum += 0xFFFF & header.getShort();
+      }     
+      // if length is odd
+      if(length % 2 > 0){
+        sum += (header.get() & 0xFF) << 8;
+      }
+      sum = ((sum >> 16) & 0xFFFF) + (sum & 0xFFFF);
+      short result = (short) (~sum & 0xFFFF);
+      return result;
+   }
+}
